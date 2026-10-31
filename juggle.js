@@ -29,14 +29,15 @@
   function reset(){
     counter.reset();savedAttempt=false;lastFrame=-1;previousResult=0;metrics();
   }
-  function draw(balls=[],feet=[]){
+  function draw(balls=[],feet=[],region=null){
     const w=canvas.width,h=canvas.height;
+    if(region){ctx.strokeStyle='#70ffac66';ctx.lineWidth=2;ctx.strokeRect(region.x*w,region.y*h,region.w*w,region.h*h);}
     if(floor!==null){ctx.strokeStyle='#ffd763';ctx.lineWidth=2;ctx.setLineDash([8,6]);ctx.beginPath();ctx.moveTo(0,floor*h);ctx.lineTo(w,floor*h);ctx.stroke();ctx.setLineDash([]);}
     for(const f of feet.filter(f=>f.visibility>=0.6)){
       ctx.fillStyle='#56e7ff';ctx.beginPath();ctx.arc(f.x*w,f.y*h,5,0,2*Math.PI);ctx.fill();
     }
     for(const b of balls){
-      ctx.strokeStyle='#70ffac';ctx.lineWidth=3;ctx.beginPath();ctx.arc(b.x*w,b.y*h,b.r*h,0,2*Math.PI);ctx.stroke();
+      ctx.strokeStyle=b.confidence>=0.45?'#70ffac':'#ffd763';ctx.lineWidth=3;ctx.beginPath();ctx.arc(b.x*w,b.y*h,b.r*h,0,2*Math.PI);ctx.stroke();
     }
     ctx.fillStyle='#06131ddd';ctx.fillRect(6,6,220,34);ctx.fillStyle='#70ffac';ctx.font='bold 20px system-ui';ctx.fillText(counter.total+' embaixadinhas',14,30);
   }
@@ -48,6 +49,7 @@
     const visibleFeet=feet.filter(f=>f.visibility>=0.6);
     let message;
     if(balls.length!==1){counter.missing(mediaTime*1000);message=balls.length ? 'Há mais de uma bola. Deixe apenas uma no quadro.' : 'Procurando a bola. Aproxime o aparelho e melhore a iluminação.';}
+    else if(balls[0].confidence<0.45){counter.missing(mediaTime*1000);message='Bola localizada com baixa confiança (amarelo). Aproxime a câmera, ilumine a bola e mantenha os pés visíveis.';}
     else if(!visibleFeet.length){counter.missing(mediaTime*1000);message='Pés não visíveis. Enquadre o corpo inteiro e os pés.';}
     else if(floor===null){message='Marque a linha do chão no quadro para liberar a contagem.';}
     else {
@@ -55,13 +57,13 @@
       if(hit){savedAttempt=false;hit.videoTime=mediaTime;canvas.style.outline='3px solid #70ffac';setTimeout(()=>canvas.style.outline='',180);}
       message=marking ? 'Toque no chão, logo abaixo dos pés, no quadro de análise.' : 'Contando automaticamente. Mantenha a bola e os pés visíveis.';
     }
-    metrics();draw(balls,feet);status(message);
+    metrics();draw(balls,feet,data.region);status(message);
     el('juggleQuality').textContent=(balls.length===1 ? 'Detecção da bola: '+Math.round(balls[0].confidence*100)+'% • ' : '')+
-      (fps ? Math.round(fps)+' quadros analisados/s'+(fps<8 ? ' • Processamento lento: lances rápidos podem ser perdidos.' : '') : 'Iniciando análise…');
+      (data.backend ? (data.backend==='GPU/GPU'?'Aceleração gráfica • ':'Modo compatível • ') : '')+(fps ? Math.round(fps)+' quadros analisados/s'+(fps<8 ? ' • Processamento lento: lances rápidos podem ser perdidos.' : '') : 'Iniciando análise…');
   }
   function ensureWorker(){
     if(worker)return;
-    worker=new Worker('juggle-worker.js?v=2');
+    worker=new Worker('juggle-worker.js?v=3');
     worker.onerror=e=>{console.error('REALPLAY worker:',e.message,e.filename,e.lineno);fail('Não foi possível carregar a IA. Confira a internet e tente em Chrome, Edge ou Safari atualizado.');};
     worker.onmessage=({data})=>{
       if(data.type==='ready'){clearTimeout(loadTimer);ready=true;if(active){status('IA pronta. Marque a linha do chão no quadro.');source.play().then(()=>{if(active)schedule();}).catch(()=>stop('Toque em play no vídeo e reative o contador.'));}}
