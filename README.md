@@ -1,13 +1,27 @@
 # REALPLAY
 
-Fase 1: vídeo real, gravação local e pontuação manual.
+[Abra o jogo](https://richardparticular1-bit.github.io/realplay/) no navegador do celular, tablet ou computador.
 
-## Publicar
-Em Settings > Pages, selecione Deploy from a branch, branch main e pasta / (root). Salve e aguarde o link HTTPS do GitHub Pages.
+## Embaixadinhas automáticas (experimental)
+1. Mantenha o aparelho fixo e uma única pessoa e bola de futebol no quadro. Ilumine bem e enquadre os pés.
+2. Escolha Câmera ao vivo ou Vídeo do player. Para um arquivo próprio, abra o vídeo no painel Arena real.
+3. Toque em Ativar contador automático e aguarde o download dos modelos.
+4. No quadro de análise, toque no chão logo abaixo dos pés. Recalibre se mover o aparelho.
+5. Execute as embaixadinhas: a estimativa exige descida, proximidade do pé e subida confirmada. O primeiro toque pode não ser contado se a descida não for visível.
+6. Pause para salvar o resultado no ranking exclusivo de embaixadinhas. Exporte a análise para guardar os tempos dos eventos.
 
-## Jogar
-Abra o link HTTPS em um navegador atualizado. Toque em Abrir câmera, permita o acesso e toque em Iniciar gravação. Pare para analisar no player e baixe o vídeo para guardá-lo. A gravação termina automaticamente após 3 minutos.
+A IA roda em um Web Worker no aparelho. EfficientDet Lite0 encontra bolas; Pose Landmarker Lite localiza os pés. Downloads iniciais usam jsDelivr e Google Storage. Não enviamos imagens aos servidores do REALPLAY. Internet necessária para baixar os modelos.
 
-Áudio é opcional. Sem suporte à câmera ao vivo, use Gravar pelo celular ou Abra outro vídeo. Câmera depende de HTTPS/localhost e suporte do aparelho. Vídeos não são enviados a servidores. Ranking local por navegador; exportação JSON disponível.
+**Limites:** estimativa, sem validação de precisão em uma base rotulada de embaixadinhas. Pode perder toques rápidos ou ocultos e confundir quiques próximos dos pés. Use o replay para conferir. A linha do chão é uma aproximação 2D; não é um árbitro certificado. Objetos pequenos, câmera móvel, duas bolas e pés fora de quadro prejudicam a análise.
 
-O vídeo de demonstração possui placar ilustrativo. Não há detecção automática de gols.
+## Gravação e pontuação
+Abrir câmera > Iniciar gravação > Parar gravação > Baixar gravação. Áudio opcional, limite de três minutos. O contador pode operar junto da gravação; ao parar a gravação, reative o contador na fonte Vídeo do player para analisar o replay. Gols permanecem manuais e têm ranking separado.
+
+Ranking salvo apenas no navegador. Vídeos gravados precisam ser baixados antes de fechar a página.
+
+## Publicação e testes
+GitHub Pages: main, / (root). Para testar localmente, sirva a pasta por localhost. Não abra via file:// para análise com Worker.
+
+`node --test test-juggle.cjs` valida trajetórias sintéticas: toque válido, repetição, jitter, chão, oclusão e confiança baixa. `node test-camera.cjs` verifica os controles de gravação com dispositivos simulados. Os testes não medem a precisão visual dos modelos em situações reais.
+
+MediaPipe Tasks Vision 0.10.32, Apache-2.0. Veja THIRD_PARTY_NOTICES.md e LICENSE-mediapipe.txt.
