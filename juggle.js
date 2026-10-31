@@ -2,7 +2,7 @@
   const el = id => document.getElementById(id);
   const canvas=el('juggleCanvas'), ctx=canvas.getContext('2d');
   const counter=new JuggleCounter(), rankKey='realplay_juggle_ranking_v1';
-  let worker=null, ready=false, active=false, busy=false, session=0;
+  let worker=null, ready=false, active=false, busy=false, session=0, internalSeek=false;
   let source=null, floor=null, marking=false, raf=0, loadTimer=null;
   let lastFrame=-1, lastStamp=0, previousResult=0, savedAttempt=false;
   const status=text=>{el('juggleStatus').textContent=text;};
@@ -104,6 +104,16 @@
       if(chosen===el('cameraPreview') && !chosen.srcObject)await el('openCamera').onclick();
       if(!active || session!==startingSession)return;
       if(chosen===el('cameraPreview') && !chosen.srcObject){stop('Abra a câmera e permita o acesso antes de contar.');return;}
+      if(chosen===el('video') && chosen.ended){
+        internalSeek=true;
+        try {
+          await new Promise((resolve,reject)=>{
+            const timeout=setTimeout(()=>{chosen.removeEventListener('seeked',done);reject(new Error('rewind timeout'));},5000);
+            function done(){clearTimeout(timeout);resolve();}
+            chosen.addEventListener('seeked',done,{once:true});chosen.currentTime=0;
+          });
+        } finally {internalSeek=false;}
+      }
       await chosen.play();
       if(!active || session!==startingSession)return;
       canvas.hidden=false;controls();
@@ -124,9 +134,9 @@
     status('Calibração concluída. A contagem acontece automaticamente.');
   };
   el('resetJuggle').onclick=()=>{reset();status(active?'Nova tentativa iniciada.':'Contador zerado. Ative a contagem para começar.');};
-  el('juggleSource').onchange=()=>{floor=null;reset();canvas.hidden=true;source=null;controls();status('Fonte alterada. Ative o contador e marque a linha do chão.');el('floorStatus').textContent='Calibração necessária para a nova fonte.';};
+  el('juggleSource').onchange=()=>{floor=null;reset();canvas.hidden=true;source=null;controls();status(el('juggleSource').value==='camera'?'Modo ao vivo: toque em Ativar contador automático para abrir a câmera.':'Modo replay: será analisado o vídeo do painel Arena real, abaixo. Toque em Ativar contador automático.');el('juggleQuality').textContent='Detecção aguardando início.';el('floorStatus').textContent='Calibração necessária para a nova fonte.';};
   const player=el('video');
-  player.addEventListener('seeking',()=>{if(source===player){stop('Vídeo reposicionado. Inicie uma nova tentativa para evitar contar lances repetidos.');reset();}});
+  player.addEventListener('seeking',()=>{if(source===player && !internalSeek){stop('Vídeo reposicionado. Inicie uma nova tentativa para evitar contar lances repetidos.');reset();}});
   player.addEventListener('loadstart',()=>{if(source===player){stop('Vídeo alterado. Ative o contador e recalibre o chão.');floor=null;reset();}});
   player.addEventListener('ended',()=>{if(source===player && active)stop('Vídeo concluído. Confira os resultados e salve a tentativa.');});
   function rankings(){try{const data=JSON.parse(localStorage.getItem(rankKey)||'[]');return Array.isArray(data)?data:[];}catch{return [];}}
